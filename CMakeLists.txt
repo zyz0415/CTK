@@ -68,6 +68,18 @@ endif()
 project(CTK)
 #-----------------------------------------------------------------------------
 
+# CTK_SOURCE_DIR / CTK_BINARY_DIR are used throughout to locate CTK's own files.
+# They coincide with CMAKE_SOURCE_DIR / CMAKE_BINARY_DIR only when CTK is the
+# top-level project. When CTK is embedded (add_subdirectory()/FetchContent),
+# project(CTK) does not shadow them, so define them explicitly from CTK's own
+# directory to keep every reference correct in both cases.
+if(NOT DEFINED CTK_SOURCE_DIR)
+  set(CTK_SOURCE_DIR "${CMAKE_CURRENT_SOURCE_DIR}")
+endif()
+if(NOT DEFINED CTK_BINARY_DIR)
+  set(CTK_BINARY_DIR "${CMAKE_CURRENT_BINARY_DIR}")
+endif()
+
 #-----------------------------------------------------------------------------
 # Set defaults
 #
@@ -156,9 +168,18 @@ foreach(type LIBRARY RUNTIME ARCHIVE)
       set(output_dir ${CTK_CMAKE_${type}_OUTPUT_DIRECTORY})
     endif()
   endif()
-  set(CMAKE_${type}_OUTPUT_DIRECTORY ${output_dir} CACHE INTERNAL "Single output directory for building all libraries.")
-  if(NOT DEFINED CTK_PLUGIN_${type}_OUTPUT_DIRECTORY)
-    set(CTK_PLUGIN_${type}_OUTPUT_DIRECTORY ${CMAKE_${type}_OUTPUT_DIRECTORY})
+  # When embedded as a subproject, do not overwrite the parent project's
+  # CMAKE_<type>_OUTPUT_DIRECTORY (a global cache variable). Keep CTK's own
+  # artifacts in a dedicated subdirectory instead.
+  if(CTK_AS_SUBPROJECT)
+    set(_ctk_own_output_dir ${output_dir})
+    set(CTK_PLUGIN_${type}_OUTPUT_DIRECTORY ${_ctk_own_output_dir})
+    unset(_ctk_own_output_dir)
+  else()
+    set(CMAKE_${type}_OUTPUT_DIRECTORY ${output_dir} CACHE INTERNAL "Single output directory for building all libraries.")
+    if(NOT DEFINED CTK_PLUGIN_${type}_OUTPUT_DIRECTORY)
+      set(CTK_PLUGIN_${type}_OUTPUT_DIRECTORY ${CMAKE_${type}_OUTPUT_DIRECTORY})
+    endif()
   endif()
 endforeach()
 
@@ -1247,8 +1268,13 @@ set(CTK_CONFIG_H_INCLUDE_DIR ${CTK_BINARY_DIR})
 #-----------------------------------------------------------------------------
 # Set C/CXX Flags
 #
-set(CMAKE_CXX_FLAGS ${CTK_CXX_FLAGS} CACHE STRING "CMake C Flags" FORCE)
-set(CMAKE_C_FLAGS ${CTK_C_FLAGS} CACHE STRING "CMake CXX Flags" FORCE)
+# When embedded as a subproject, do not force-overwrite the parent project's
+# CMAKE_CXX_FLAGS / CMAKE_C_FLAGS (global cache variables); apply CTK's flags
+# to CTK targets only via CTK_CXX_FLAGS / CTK_C_FLAGS.
+if(NOT CTK_AS_SUBPROJECT)
+  set(CMAKE_CXX_FLAGS ${CTK_CXX_FLAGS} CACHE STRING "CMake C Flags" FORCE)
+  set(CMAKE_C_FLAGS ${CTK_C_FLAGS} CACHE STRING "CMake CXX Flags" FORCE)
+endif()
 
 set(CMAKE_EXE_LINKER_FLAGS "${CMAKE_EXE_LINKER_FLAGS_INIT} ${CTK_EXE_LINKER_FLAGS}" CACHE STRING "Flags used when linking executables" FORCE)
 

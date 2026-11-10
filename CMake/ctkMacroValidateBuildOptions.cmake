@@ -170,6 +170,13 @@ macro(ctkMacroValidateBuildOptions dir executable target_directories)
           list(APPEND known_targets ${ext_dep_path_list})
         endif()
       endif()
+      # When CTK is embedded via add_subdirectory()/FetchContent, CMAKE_SOURCE_DIR
+      # is the parent project, so the branch above never registers the external
+      # targets. They are still legitimate dependencies of the enabled targets
+      # (e.g. QT_LIBRARIES resolved by find_package), so register them anyway.
+      if(CTK_AS_SUBPROJECT)
+        list(APPEND known_targets ${ext_dep_path_list})
+      endif()
     endif()
 
     foreach(dep ${int_dep_path_list})

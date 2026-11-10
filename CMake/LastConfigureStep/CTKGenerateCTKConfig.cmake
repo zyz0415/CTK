@@ -129,7 +129,13 @@ set(CTK_CMAKE_DIR_CONFIG ${CTK_CMAKE_DIR})
 set(CTK_CMAKE_UTILITIES_DIR_CONFIG ${CTK_CMAKE_UTILITIES_DIR})
 set(CTK_CONFIG_H_INCLUDE_DIR_CONFIG ${CTK_CONFIG_H_INCLUDE_DIR})
 set(CTK_EXPORT_HEADER_TEMPLATE_DIR_CONFIG ${CTK_SOURCE_DIR}/Libs)
-set(CTK_LIBRARY_DIR_CONFIG ${CMAKE_LIBRARY_OUTPUT_DIRECTORY})
+# When CTK is embedded as a subproject the parent project owns
+# CMAKE_LIBRARY_OUTPUT_DIRECTORY, so fall back to CTK's own output directory.
+if(DEFINED CMAKE_LIBRARY_OUTPUT_DIRECTORY AND NOT "${CMAKE_LIBRARY_OUTPUT_DIRECTORY}" STREQUAL "")
+  set(CTK_LIBRARY_DIR_CONFIG ${CMAKE_LIBRARY_OUTPUT_DIRECTORY})
+else()
+  set(CTK_LIBRARY_DIR_CONFIG ${CTK_PLUGIN_LIBRARY_OUTPUT_DIRECTORY})
+endif()
 
 set(CTK_CONFIG_CODE "####### Expanded from \@CTK_CONFIG_CODE\@ #######\n")
 set(CTK_CONFIG_CODE "${CTK_CONFIG_CODE}# The CTK DGraph executable used to compute target dependency graphs\n")
@@ -171,7 +177,7 @@ set(CTK_CONFIG_CODE "${CTK_CONFIG_CODE}#########################################
 set(ctk_config ${CTK_SUPERBUILD_BINARY_DIR}/CTKConfig.cmake)
 
 configure_package_config_file(
-  ${CMAKE_SOURCE_DIR}/CMake/CTKConfig.cmake.in
+  ${CTK_SOURCE_DIR}/CMake/CTKConfig.cmake.in
   ${ctk_config}
   INSTALL_DESTINATION ${CTK_SUPERBUILD_BINARY_DIR}
   PATH_VARS
@@ -226,7 +232,7 @@ set(CTK_CONFIG_CODE "${CTK_CONFIG_CODE}#########################################
 set(ctk_install_config ${CMAKE_BINARY_DIR}/CMakeFiles/CTKConfig.cmake)
 
 configure_package_config_file(
-  ${CMAKE_SOURCE_DIR}/CMake/CTKConfig.cmake.in
+  ${CTK_SOURCE_DIR}/CMake/CTKConfig.cmake.in
   ${ctk_install_config}
   INSTALL_DESTINATION ${CTK_INSTALL_CMAKE_DIR}
   PATH_VARS
